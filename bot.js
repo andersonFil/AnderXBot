@@ -83,7 +83,7 @@ async function esAdmin(sock, chatId, sender) {
   return false;
 }
 //startBot
-async function startBot() {
+async function main() {
   const { state, saveCreds } = await useMultiFileAuthState("./auth");
   const sock = makeWASocket({
     auth: state,
@@ -109,8 +109,6 @@ async function startBot() {
       contadorComandos++;
 
       const nivelAdmin = await esAdmin(sock, chatId, sender);
-	}
-		startBot();
 
 // 🚫 Anti-links configurable con lista blanca + DM + on/off
 const MAX_STRIKES = 2; // número máximo de advertencias antes de expulsar

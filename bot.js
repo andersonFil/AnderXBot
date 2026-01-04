@@ -1,4 +1,4 @@
-import makeWASocket, { useMultiFileAuthState, Browsers } from "@whiskeysockets/baileys";
+const { default: makeWASocket, useMultiFileAuthState } = require ("@whiskeysockets/baileys");
 console.log("Esaperando escaneo de QR... Abre Whatsapp y escanea el codigo que aparece abajo.");
 import ytSearch from "yt-search";
 import fs from "fs";

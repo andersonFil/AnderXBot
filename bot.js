@@ -1386,6 +1386,6 @@ if (body.startsWith("!nnxnxx ")) {
       console.error("❌ Error procesando mensaje:", e);
     }
   });
-
+}
 
 main();

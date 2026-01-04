@@ -81,13 +81,12 @@ async function esAdmin(sock, chatId, sender) {
 
   return false;
 }
-
-async function main() {
-  const { state, saveCreds } = await useMultiFileAuthState("auth");
+//startBot
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState("./auth");
   const sock = makeWASocket({
     auth: state,
-    browser: Browsers.ubuntu("Chrome"),
-    printQRInTerminal: true
+    printQRInTerminal: true,
   });
 
   sock.ev.on("creds.update", saveCreds);
@@ -109,6 +108,8 @@ async function main() {
       contadorComandos++;
 
       const nivelAdmin = await esAdmin(sock, chatId, sender);
+	}
+		startBot();
 
 // 🚫 Anti-links configurable con lista blanca + DM + on/off
 const MAX_STRIKES = 2; // número máximo de advertencias antes de expulsar

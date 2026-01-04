@@ -1,0 +1,265 @@
+import makeWASocket, { useMultiFileAuthState } from "@whiskeysockets/baileys";
+import ytSearch from "yt-search";
+import fs from "fs";
+import { spawn } from "child_process";
+import fetch from "node-fetch";
+
+const ADMIN = "584247057716"; // tu número admin
+let contadorComandos = 0;
+const inicioBot = Date.now();
+
+// ✅ Reconocimiento de admin robusto
+function esAdmin(sender) {
+  if (!sender) return false;
+  const limpio = sender.replace(/\D/g, ""); // elimina todo lo que no sea número
+  return limpio === ADMIN;
+}
+
+// Ejecutar yt-dlp
+function runYtDlp(args, onStdout) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("yt-dlp", args);
+    proc.stdout.on("data", (d) => onStdout?.(d.toString()));
+    proc.stderr.on("data", (d) => onStdout?.(d.toString()));
+    proc.on("error", reject);
+    proc.on("close", (code) => (code === 0 ? resolve(true) : reject(new Error("yt-dlp error"))));
+  });
+}
+
+// Buscar primer resultado en YouTube
+async function searchFirst(query) {
+  const res = await ytSearch(query);
+  if (res && res.videos && res.videos.length > 0) return res.videos[0];
+  return null;
+}
+
+async function main() {
+  const { state, saveCreds } = await useMultiFileAuthState("auth");
+  const sock = makeWASocket({ auth: state });
+  sock.ev.on("creds.update", saveCreds);
+
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    try {
+      const msg = messages[0];
+      if (!msg?.message) return;
+
+      const sender = msg.key.participant || msg.key.remoteJid;
+      const chatId = msg.key.remoteJid;
+      const text =
+        msg.message.conversation ||
+        msg.message.extendedTextMessage?.text ||
+        msg.message?.imageMessage?.caption ||
+        msg.message?.videoMessage?.caption ||
+        "";
+      const body = text.trim();
+      contadorComandos++;
+
+      // 📌 Help
+      if (body === "!help") {
+        let helpText = "📌 *Lista de comandos disponibles:*\n\n";
+        helpText += "• *!mp4 <nombre>*\n  Descarga el primer video relacionado y lo envía como video ligero.\n\n";
+        helpText += "• *!mp3 <nombre>*\n  Descarga el audio del primer video relacionado y lo envía como archivo MP3.\n\n";
+        helpText += "• *!pi <nombre>* o *!p <nombre>*\n  Busca una imagen relacionada y la envía como foto.\n\n";
+        helpText += "• *!estado*\n  Muestra el estado actual del bot.\n\n";
+        helpText += "• *!limpiar*\n  Elimina archivos temporales del bot.\n\n";
+        helpText += "🔞 *Comandos adultos:*\n";
+        helpText += "• *!nn <nombre>*\n  (Desactivado por defecto. Solo admin puede activarlo.)\n\n";
+        if (esAdmin(sender)) {
+          helpText += "⭐ *Prime Commands (solo admin):*\n";
+          helpText += "• *!mp4 <nombre> <documento>*\n  Descarga el video en calidad alta y lo envía como documento.\n\n";
+          helpText += "• *!nn activar* / *!nn desactivar*\n  Activa o desactiva el comando adultos.\n\n";
+          helpText += "• *!limpiar*\n  Limpia archivos temporales del bot.\n\n";
+        }
+        await sock.sendMessage(chatId, { text: helpText, quoted: msg });
+        return;
+      }
+
+      // 📊 Estado
+      if (body === "!estado") {
+        const uptimeMs = Date.now() - inicioBot;
+        const minutos = Math.floor(uptimeMs / 60000);
+        const memoria = process.memoryUsage().rss / 1024 / 1024;
+        await sock.sendMessage(chatId, {
+          text: `📊 Estado del bot:\n\n⏱️ Tiempo activo: ${minutos} min\n🧠 Memoria usada: ${memoria.toFixed(1)} MB\n⚙️ Comandos ejecutados: ${contadorComandos}`,
+          quoted: msg
+        });
+        return;
+      }
+
+      // 🧹 Limpiar
+      if (body === "!limpiar") {
+        //if (!esAdmin(sender)) {
+	ifff
+          await sock.sendMessage(chatId, { text: "🔒 Solo el admin puede ejecutar !limpiar.", quoted: msg });
+          return;
+        }
+        const archivos = ["./video.mp4","./video.webm","./video.mkv","./audio.mp3"];
+        archivos.forEach(f => { try { if (fs.existsSync(f)) fs.unlinkSync(f); } catch(_){} });
+        await sock.sendMessage(chatId, { text: "🧹 Archivos temporales eliminados correctamente.", quoted: msg });
+        return;
+      }
+
+      // 🖼️ Imagen
+      if (body.startsWith("!pi ") || body.startsWith("!p ")) {
+        const query = body.replace(/^!(pi|p) /, "").trim();
+        if (!query) {
+          await sock.sendMessage(chatId, { text: "❌ Falta el nombre. Usa: !pi <nombre>", quoted: msg });
+          return;
+        }
+
+        try {
+          const res = await fetch(`https://source.unsplash.com/600x400/?${encodeURIComponent(query)}`);
+          if (!res.ok) throw new Error("No se pudo obtener la imagen");
+          const buffer = Buffer.from(await res.arrayBuffer());
+          if (!buffer || buffer.length < 1000) throw new Error("Imagen inválida");
+
+          await sock.sendMessage(chatId, {
+            image: buffer,
+            caption: `🖼️ Imagen relacionada con: ${query}`,
+            quoted: msg
+          });
+        } catch (e) {
+          await sock.sendMessage(chatId, { text: "❌ No pude obtener la imagen.", quoted: msg });
+        }
+        return;
+      }
+	// 🎬 Video
+      if (body.startsWith("!mp4 ")) {
+        const parts = body.split(" ").filter(Boolean);
+        const modoDocumento = parts.includes("<documento>") && esAdmin(sender);
+        const query = parts.slice(1).filter(p => p !== "<documento>").join(" ").trim();
+        if (!query) {
+          await sock.sendMessage(chatId, { text: "❌ Falta el nombre. Usa: !mp4 <nombre>", quoted: msg });
+          return;
+        }
+
+        const found = await searchFirst(query);
+        if (!found) {
+          await sock.sendMessage(chatId, { text: "❌ No encontré resultados para ese nombre.", quoted: msg });
+          return;
+        }
+
+        const format = modoDocumento ? "best" : "mp4"; // ✅ corrección
+        const outPath = "./video.%(ext)s";
+        let realFile = "";
+
+        await sock.sendMessage(chatId, { text: `⏬ Descargando: ${found.title}`, quoted: msg });
+
+        try {
+          await runYtDlp([
+            "-f", format,
+            "-o", outPath,
+            found.url
+          ], log => {
+            const m = log.match(/Destination:\s(.+\.(mp4|mkv|webm))/i);
+            if (m && m[1]) realFile = m[1];
+          });
+
+          if (!realFile) {
+            if (fs.existsSync("./video.mp4")) realFile = "./video.mp4";
+            else if (fs.existsSync("./video.webm")) realFile = "./video.webm";
+            else if (fs.existsSync("./video.mkv")) realFile = "./video.mkv";
+          }
+          if (!realFile || !fs.existsSync(realFile)) {
+            await sock.sendMessage(chatId, { text: "❌ No pude ubicar el archivo descargado.", quoted: msg });
+            return;
+          }
+
+          const buffer = fs.readFileSync(realFile);
+          if (modoDocumento) {
+            await sock.sendMessage(chatId, {
+              document: buffer,
+              mimetype: "video/mp4",
+              fileName: `${found.title}.mp4`,
+              caption: `🎬 ${found.title}\n🔗 ${found.url}`,
+              quoted: msg
+            });
+          } else {
+            await sock.sendMessage(chatId, {
+              video: buffer,
+              caption: `🎬 ${found.title}\n🔗 ${found.url}`,
+              quoted: msg
+            });
+          }
+        } catch (e) {
+          await sock.sendMessage(chatId, { text: "❌ Error al descargar el video.", quoted: msg });
+        } finally {
+          try { if (realFile && fs.existsSync(realFile)) fs.unlinkSync(realFile); } catch (_) {}
+        }
+        return;
+      }
+
+      // 🎧 Audio
+      if (body.startsWith("!mp3 ")) {
+        const query = body.replace("!mp3 ", "").trim();
+        if (!query) {
+          await sock.sendMessage(chatId, { text: "❌ Falta el nombre. Usa: !mp3 <nombre>", quoted: msg });
+          return;
+        }
+
+        const found = await searchFirst(query);
+        if (!found) {
+          await sock.sendMessage(chatId, { text: "❌ No encontré resultados para ese nombre.", quoted: msg });
+          return;
+        }
+
+        const outPath = "./audio.%(ext)s";
+        let realFile = "";
+
+        await sock.sendMessage(chatId, { text: `⏬ Descargando audio: ${found.title}`, quoted: msg });
+
+        try {
+          await runYtDlp([
+            "-x", "--audio-format", "mp3",
+            "-o", outPath,
+            found.url
+          ], log => {
+            const m = log.match(/Destination:\s(.+\.mp3)/i);
+            if (m && m[1]) realFile = m[1];
+          });
+
+          if (!realFile) {
+            if (fs.existsSync("./audio.mp3")) realFile = "./audio.mp3";
+          }
+          if (!realFile || !fs.existsSync(realFile)) {
+            await sock.sendMessage(chatId, { text: "❌ No pude ubicar el MP3 descargado.", quoted: msg });
+            return;
+          }
+
+          const buffer = fs.readFileSync(realFile);
+          await sock.sendMessage(chatId, {
+            document: buffer,
+            mimetype: "audio/mpeg",
+            fileName: `${found.title}.mp3`,
+            caption: `🎧 ${found.title}\n🔗 ${found.url}`,
+            quoted: msg
+          });
+        } catch (e) {
+          await sock.sendMessage(chatId, { text: "❌ Error al convertir a MP3.", quoted: msg });
+        } finally {
+          try { if (realFile && fs.existsSync(realFile)) fs.unlinkSync(realFile); } catch (_) {}
+        }
+        return;
+      }
+
+      // 🔞 Adultos
+      if (body.startsWith("!nn ")) {
+        await sock.sendMessage(chatId, { text: "🔒 El comando nn está desactivado por seguridad.", quoted: msg });
+        return;
+      }
+      if (body === "!nn activar" && esAdmin(sender)) {
+        await sock.sendMessage(chatId, { text: "✅ Comando nn activado (modo seguro, sin descargas explícitas).", quoted: msg });
+        return;
+      }
+      if (body === "!nn desactivar" && esAdmin(sender)) {
+        await sock.sendMessage(chatId, { text: "✅ Comando nn desactivado.", quoted: msg });
+        return;
+      }
+
+    } catch (e) {
+      console.error("❌ Error procesando mensaje:", e);
+    }
+  });
+}
+
+main();

@@ -1,5 +1,5 @@
 {
-  "name": "anderx-bot",
+  "name": "bot-whatsapp",
   "version": "1.0.0",
   "description": "Bot de whatsapp desarrollado en Node.js con Baileys",
   "main": "bot.js",
@@ -11,11 +11,11 @@
   "author": "Anderson",
   "license": "ISC",
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.5",
-    "cheerio": "^1.0.0",
+    "@whiskeysockets/baileys": "^7.0.0-rc.9",
+    "cheerio": "^1.1.2",
     "node-fetch": "^3.3.2",
     "qrcode": "^1.5.4",
-    "yt-search": "^2.10.4",
+    "yt-search": "^2.13.1",
     "ytdl-core": "^4.11.5",
   }
 }

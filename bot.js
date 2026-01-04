@@ -82,7 +82,6 @@ async function esAdmin(sock, chatId, sender) {
   return false;
 } 
 //startBot
-const { default: makeWASocket, useMultiFileAuthState } = require ("@whiskeysockets/baileys");
 console.log("Esaperando escaneo de QR... Abre Whatsapp y escanea el codigo que aparece abajo.");
 
 async function main() {

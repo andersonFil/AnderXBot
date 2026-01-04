@@ -1,5 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState } = require ("@whiskeysockets/baileys");
-console.log("Esaperando escaneo de QR... Abre Whatsapp y escanea el codigo que aparece abajo.");
+import makeWASocket, { useMultiFileAuthState, Browsers } from "@whiskeysockets/baileys";
 import ytSearch from "yt-search";
 import fs from "fs";
 import { spawn } from "child_process";
@@ -81,8 +80,11 @@ async function esAdmin(sock, chatId, sender) {
   }
 
   return false;
-}
+} 
 //startBot
+const { default: makeWASocket, useMultiFileAuthState } = require ("@whiskeysockets/baileys");
+console.log("Esaperando escaneo de QR... Abre Whatsapp y escanea el codigo que aparece abajo.");
+
 async function main() {
   const { state, saveCreds } = await useMultiFileAuthState("./auth");
   const sock = makeWASocket({

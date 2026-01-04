@@ -1,6 +1,8 @@
-# Ignorar archivos grandes y sensibles
+# Ignorar archivos multimedia grandes
 *.mp4
 *.mp3
+*.avi
+*.mkv
 *.zip
 *.rar
 *.tar
@@ -9,8 +11,17 @@
 # Ignorar sesiones y autenticación
 auth/
 session.json
-modo.json
+session-*.json
+sender-key-*.json
 
-# Ignorar temporales
+# Ignorar configuraciones locales
+
+# Ignorar dependencias y temporales
 node_modules/
 tmp/
+*.log
+.DS_Store
+
+# Ignorar backups
+*.bak
+*.old

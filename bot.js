@@ -82,16 +82,34 @@ async function esAdmin(sock, chatId, sender) {
   return false;
 } 
 //startBot
-console.log("Esaperando escaneo de QR... Abre Whatsapp y escanea el codigo que aparece abajo.");
-
 async function main() {
-  const { state, saveCreds } = await useMultiFileAuthState("./auth");
+  const { state, saveCreds } = await useMultiFileAuthState("auth");
+	
   const sock = makeWASocket({
     auth: state,
-    printQRInTerminal: true,
+    browser: Browsers.ubuntu("Chrome")
   });
 
   sock.ev.on("creds.update", saveCreds);
+
+	// evento de conexion
+	sock.ev.on("connection.update", (update) => {
+		const { qr, connection } = update;
+		
+			  if (qr) {
+				  console.log("AnderX Bot iniciado");
+				  console.log("Escanea este QR con Whatsapp:");
+				  console.log(qr);
+			  }
+		if (connection === "open") {
+			console.log("conectado a Whatsapp");
+		}
+		
+		if (connection === "close") {
+			console.log("X Conexion cerrada, intenta reiniciar el bot");
+		}
+	});
+}
 
   sock.ev.on("messages.upsert", async ({ messages }) => {
     try {

@@ -1,0 +1,16 @@
+# Ignorar archivos grandes y sensibles
+*.mp4
+*.mp3
+*.zip
+*.rar
+*.tar
+*.gz
+
+# Ignorar sesiones y autenticación
+auth/
+session.json
+modo.json
+
+# Ignorar temporales
+node_modules/
+tmp/
